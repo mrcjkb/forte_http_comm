@@ -224,8 +224,53 @@ bool CHttpComLayer::serializeData(const CIEC_ANY& pa_roCIECData) {
 	case CIEC_ANY::e_BOOL:
 		string = static_cast<CIEC_STRING>(BOOL_TO_STRING(static_cast<const CIEC_BOOL&>(pa_roCIECData)));
 		break;
+	case CIEC_ANY::e_SINT:
+		string = static_cast<CIEC_STRING>(SINT_TO_STRING(static_cast<const CIEC_SINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_INT:
+		string = static_cast<CIEC_STRING>(INT_TO_STRING(static_cast<const CIEC_INT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_DINT:
+		string = static_cast<CIEC_STRING>(DINT_TO_STRING(static_cast<const CIEC_DINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_LINT:
+		string = static_cast<CIEC_STRING>(LINT_TO_STRING(static_cast<const CIEC_LINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_USINT:
+		string = static_cast<CIEC_STRING>(USINT_TO_STRING(static_cast<const CIEC_USINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_UINT:
+		string = static_cast<CIEC_STRING>(UINT_TO_STRING(static_cast<const CIEC_UINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_UDINT:
+		string = static_cast<CIEC_STRING>(UDINT_TO_STRING(static_cast<const CIEC_UDINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_ULINT:
+		string = static_cast<CIEC_STRING>(ULINT_TO_STRING(static_cast<const CIEC_ULINT&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_BYTE:
+		string = static_cast<CIEC_STRING>(BYTE_TO_STRING(static_cast<const CIEC_BYTE&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_WORD:
+		string = static_cast<CIEC_STRING>(WORD_TO_STRING(static_cast<const CIEC_WORD&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_DWORD:
+		string = static_cast<CIEC_STRING>(DWORD_TO_STRING(static_cast<const CIEC_DWORD&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_LWORD:
+		string = static_cast<CIEC_STRING>(LWORD_TO_STRING(static_cast<const CIEC_LWORD&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_TIME:
+		string = static_cast<CIEC_STRING>(TIME_TO_STRING(static_cast<const CIEC_TIME&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_REAL:
+		string = static_cast<CIEC_STRING>(REAL_TO_STRING(static_cast<const CIEC_REAL&>(pa_roCIECData)));
+		break;
 	case CIEC_ANY::e_LREAL:
 		string = static_cast<CIEC_STRING>(LREAL_TO_STRING(static_cast<const CIEC_LREAL&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_WSTRING:
+		string = static_cast<CIEC_STRING>(WSTRING_TO_STRING(static_cast<const CIEC_WSTRING&>(pa_roCIECData)));
 		break;
 	default:
 		return false;
@@ -233,21 +278,4 @@ bool CHttpComLayer::serializeData(const CIEC_ANY& pa_roCIECData) {
 	const char* data = string.getValue();
 	memcpy(mReqData, data, strlen(data) + 1);
 	return true;
-
-
-			/**
-			  e_ANY, e_BOOL, e_SINT, e_INT, e_DINT, e_LINT, e_USINT, e_UINT, e_UDINT, e_ULINT, e_BYTE, e_WORD, e_DWORD, e_LWORD, e_DATE, e_TIME_OF_DAY, e_DATE_AND_TIME, e_TIME, //until here simple Datatypes
-	  e_REAL,
-	  e_LREAL,
-	  e_STRING,
-	  e_WSTRING,
-	  e_DerivedData,
-	  e_DirectlyDerivedData,
-	  e_EnumeratedData,
-	  e_SubrangeData,
-	  e_ARRAY, //according to the compliance profile
-	  e_STRUCT,
-	  e_External = 256, // Base for CIEC_ANY based types outside of the forte base
-	  e_Max = 65535 
-			*/
 }

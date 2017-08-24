@@ -29,6 +29,8 @@ example: http[144.12.131.2:80/rest/battery/voltage]
   Thus, it is assumed that a number is returned for the GET request and a number is sent for the PUT request.
   To adjust the parsing of requests and responses, change the CHttpParser class accordingly.
 * In the long run, a factory for the CHttpParser may be implemented.
+* The following IEC 61499 data types are currently NOT supported for PUT requests: DATE, TIME_OF_DAY, arrays, structs
+  
 
 By default, a GET request is sent as:
 "GET /path HTTP/1.1
