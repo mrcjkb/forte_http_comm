@@ -55,7 +55,7 @@
 using namespace forte::com_infra;
 
 CHttpComLayer::CHttpComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
-    CComLayer(pa_poUpperLayer, pa_poComFB),
+	CComLayer(pa_poUpperLayer, pa_poComFB),
 	mHttpParser(CHttpParser()){
 }
 
@@ -138,24 +138,28 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
   mNumRequestAttempts += 1;
   mRspReceived = false;
   switch (m_poFb->getComServiceType()){
-      case e_Server:
+	  case e_Server:
 		  // TODO: Currently not implemented.
 		  eRetVal = e_Nothing;
 		  break;
-      case e_Client:
+	  case e_Client:
 	  {
 		  // Send HTTP request
+		  char request[kAllocSize];
 		  if (e_GET == m_eRequestType) {
-			char request[kAllocSize];
 			  mHttpParser.createGetRequest(request, mParams);
-			  mLastRequest = new char[kAllocSize];
-			  memcpy(mLastRequest, request, kAllocSize);
-			  eRetVal = openConnection();
-			  eRetVal = m_poBottomLayer->sendData(request, strlen(request) + 1);
 		  }
 		  else if (e_PUT == m_eRequestType) {
-			  // TODO: Implement sending of PUT request
+			  TConstIEC_ANYPtr apoSDs = static_cast<TConstIEC_ANYPtr > (pa_pvData);
+			  if (!serializeData(apoSDs[0])) {
+				  return e_Nothing; // Serializing failed
+			  }
+			  mHttpParser.createPutRequest(request, mParams, mReqData);
 		  }
+		  mLastRequest = new char[kAllocSize];
+		  memcpy(mLastRequest, request, kAllocSize);
+		  eRetVal = openConnection();
+		  eRetVal = m_poBottomLayer->sendData(request, strlen(request) + 1);
 		  break;
 	  }
 	  case e_Publisher:
@@ -171,7 +175,7 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 	char* recvData = (char*) pa_pvData;
 	EComResponse eRetVal = e_Nothing;
 	if (m_poFb != 0) {
-		CIEC_ANY *apoRDs = m_poFb->getRDs();
+		CIEC_ANY* apoRDs = m_poFb->getRDs();
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
 			// TODO: Currently not implemented.
@@ -181,13 +185,25 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			// Close the connection to avoid processInterrupt() call
 			m_poBottomLayer->closeConnection();
 			m_eConnectionState = e_Disconnected;
+			// Interpret HTTP response and set output status according to success/failure.
+			char output[kAllocSize];
+			bool success = true;
 			if (e_GET == m_eRequestType) {
-				char output[kAllocSize];
-				mHttpParser.parseGetResponse(output, recvData);
-				apoRDs->fromString(output);
+				success = mHttpParser.parseGetResponse(output, recvData);
+			}
+			else if (e_PUT == m_eRequestType) {
+				success = mHttpParser.parsePutResponse(output, recvData);
+			}
+			if (success) {
 				eRetVal = e_ProcessDataOk;
 			}
-			// TODO handle response to PUT request (return e_ProcessDataOk if it was successful, otherwise e_Nothing)
+			else {
+				eRetVal = e_ProcessDataSendFailed;
+			}
+			// Set data output if possible
+			if (m_poFb->getNumRD() > 0) {
+				apoRDs->fromString(output);
+			}
 			break;
 		}
 		case e_Publisher:
@@ -199,4 +215,39 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 	mRspReceived = true;
 	mNumRequestAttempts = 0; // reset
 	return eRetVal;
+}
+
+bool CHttpComLayer::serializeData(const CIEC_ANY& pa_roCIECData) {
+	CIEC_STRING string;
+	CIEC_ANY::EDataTypeID eDataType = pa_roCIECData.getDataTypeID();
+	switch (eDataType) {
+	case CIEC_ANY::e_BOOL:
+		string = static_cast<CIEC_STRING>(BOOL_TO_STRING(static_cast<const CIEC_BOOL&>(pa_roCIECData)));
+		break;
+	case CIEC_ANY::e_LREAL:
+		string = static_cast<CIEC_STRING>(LREAL_TO_STRING(static_cast<const CIEC_LREAL&>(pa_roCIECData)));
+		break;
+	default:
+		return false;
+	}
+	const char* data = string.getValue();
+	memcpy(mReqData, data, strlen(data) + 1);
+	return true;
+
+
+			/**
+			  e_ANY, e_BOOL, e_SINT, e_INT, e_DINT, e_LINT, e_USINT, e_UINT, e_UDINT, e_ULINT, e_BYTE, e_WORD, e_DWORD, e_LWORD, e_DATE, e_TIME_OF_DAY, e_DATE_AND_TIME, e_TIME, //until here simple Datatypes
+	  e_REAL,
+	  e_LREAL,
+	  e_STRING,
+	  e_WSTRING,
+	  e_DerivedData,
+	  e_DirectlyDerivedData,
+	  e_EnumeratedData,
+	  e_SubrangeData,
+	  e_ARRAY, //according to the compliance profile
+	  e_STRUCT,
+	  e_External = 256, // Base for CIEC_ANY based types outside of the forte base
+	  e_Max = 65535 
+			*/
 }

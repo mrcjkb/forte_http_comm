@@ -55,28 +55,61 @@ CHttpParser::CHttpParser(){
 CHttpParser::~CHttpParser(){
 }
 
-void CHttpParser::createGetRequest(char* dest, char* params) {
-	char ipParams[kAllocSize]; // address + port for CIPComLayer
+void CHttpParser::createGetRequest(char* dest, const char* params) {
+	char ipParams[kAllocSize]; // address + port
 	char path[kAllocSize]; // path for HTTP request
-	sscanf(params, "%99[^/]/%s[^/n]", ipParams, path); // openConnection removes the port from ipParams
+	sscanf(params, "%99[^/]/%s[^/n]", ipParams, path);
 	strcpy(dest, "GET /");
 	strcat(dest, path);
+	CHttpParser::addHost(dest, ipParams);
+	CHttpParser::addRequestEnding(dest);
+}
+
+void CHttpParser::createPutRequest(char* dest, const char* params, const char* data) {
+	char ipParams[kAllocSize]; // address + port
+	char path[kAllocSize]; // path for HTTP request
+	sscanf(params, "%99[^/]/%s[^/n]", ipParams, path);
+	strcpy(dest, "PUT /");
+	strcat(dest, path);
+	CHttpParser::addHost(dest, ipParams);
+	strcat(dest, "\r\nContent-type: text/html\r\nContent-length: ");
+	char contentLength[kAllocSize];
+	sprintf(contentLength, "%zu", strlen(data));
+	strcat(dest, contentLength);
+	CHttpParser::addRequestEnding(dest);
+	strcat(dest, data);
+}
+
+void CHttpParser::addHost(char* dest, const char* host) {
 	strcat(dest, " HTTP/1.1\r\nHost: ");
-	strcat(dest, ipParams);
+	strcat(dest, host);
+}
+
+void CHttpParser::addRequestEnding(char* dest) {
 	strcat(dest, "\r\n\r\n");
 }
 
-void CHttpParser::parseGetResponse(char* dest, char* src) {
+bool CHttpParser::parseGetResponse(char* dest, char* src) {
 	if (nullptr == strstr(src, "HTTP/1.1 200 OK")) {
-		// Pass response to data output
+		// Copy response to output
 		sscanf(src, "/s[^/n]", dest);
+		return false;
 	}
-	else {
-		// Extract data from HTTP GET respnse char
-		char* data = strstr(src, "\r\n\r\n");
-		if (nullptr != data) {
-			data += 4;
-			sscanf(data, "%s[^/n])", dest);
-		}
+	// Extract data from HTTP GET respnse char
+	char* data = strstr(src, "\r\n\r\n");
+	if (nullptr != data) {
+		data += 4;
+		sscanf(data, "%s[^/n])", dest);
 	}
+	return true;
+}
+
+bool CHttpParser::parsePutResponse(char* dest, char* src) {
+	if (nullptr == strstr(src, "HTTP/1.1 200 OK")) {
+		// Copy response to output
+		sscanf(src, "/s[^/n]", dest);
+		return false;
+	}
+	strcpy(dest, "HTTP/1.1 200 OK");
+	return true;
 }

@@ -9,9 +9,9 @@ Simple HTTP Com Layer for 4diac-RTE (FORTE)
 * In CMake GUI, enable FORTE_COM_HTTP
 ​
 # Documentation
-* Currently, only HTTP GET requests are supported. PUT requests are in the works.
+* Currently, only HTTP GET and PUT requests are supported.
 * For GET requests, use a CLIENT_0_1 function block.
-* For PUT requests, use a CLIENT_1_0 or CLIENT_1 function block (not yet supported!)
+* For PUT requests, use a CLIENT_1_0 or CLIENT_1 function block
 * Other function blocks are currently not supported and may result in unexpected behaviour.
 
 # Parameters
@@ -29,3 +29,17 @@ example: http[144.12.131.2:80/rest/battery/voltage]
   Thus, it is assumed that a number is returned for the GET request and a number is sent for the PUT request.
   To adjust the parsing of requests and responses, change the CHttpParser class accordingly.
 * In the long run, a factory for the CHttpParser may be implemented.
+
+By default, a GET request is sent as:
+"GET /path HTTP/1.1
+Host: ip:port"
+
+a PUT request is sent as:
+"PUT /path HTTP/1.1
+Host: ip:port
+Content-type: text/html
+Content-length: *length_of_data_string*
+
+
+data_string"
+

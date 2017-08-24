@@ -72,6 +72,8 @@ namespace forte {
 	  private:
 		EComResponse openConnection(char *pa_acLayerParameter);
 		EComResponse openConnection();
+		/** Serializes the data to a char* */
+		bool serializeData(const CIEC_ANY& pa_roCIECData);
 
 		/** enum representing the HTTP request type */
 		enum ERequestType {
@@ -92,6 +94,8 @@ namespace forte {
 		ERequestType m_eRequestType;
 		/** HTTP connection parameters */
 		char mParams[kAllocSize];
+		/** Data to be sent */
+		char mReqData[kAllocSize];
 		/** Last HTTP request */
 		char* mLastRequest;
 		/** Indicates whether the expected HTTP response has been received or not */
