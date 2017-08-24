@@ -32,16 +32,16 @@ example: http[144.12.131.2:80/rest/battery/voltage]
 * The following IEC 61499 data types are currently NOT supported for PUT requests: DATE, TIME_OF_DAY, arrays, structs
   
 
-By default, a GET request is sent as:
-"GET /path HTTP/1.1
-Host: ip:port"
-
-a PUT request is sent as:
-"PUT /path HTTP/1.1
-Host: ip:port
-Content-type: text/html
-Content-length: *length_of_data_string*
-
-
+By default, a GET request is sent as: <br />
+"GET /path HTTP/1.1 <br />
+Host: ip:port" <br />
+<br />
+a PUT request is sent as: <br />
+"PUT /path HTTP/1.1 <br />
+Host: ip:port <br />
+Content-type: text/html <br />
+Content-length: *length_of_data_string* <br />
+<br />
+<br />
 data_string"
 
