@@ -81,6 +81,11 @@ void CHttpComLayer::closeConnection(){
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerParameter){
 	EComResponse eRetVal = e_InitInvalidId;
+	if (nullptr != strchr(pa_acLayerParameter, ';')) {
+		strtok(pa_acLayerParameter, ";");
+		char* expectedRspCode = strtok(nullptr, ";");
+		mHttpParser.setExpectedRspCode(expectedRspCode);
+	}
 	switch (m_poFb->getComServiceType()) {
 	case e_Server:
 		// TODO: Currently not implemented.

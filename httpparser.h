@@ -79,7 +79,11 @@ namespace com_infra {
 			* Extracts the header from an HTTP response.
 			* Returns true if the response indicates a successful request.
 			*/
-			static bool parsePutResponse(char* dest, char* src);
+			virtual bool parsePutResponse(char* dest, char* src);
+			/**
+			* Sets the expected response.
+			*/
+			virtual void setExpectedRspCode(const char* rsp);
 
 
 		private:
@@ -90,11 +94,15 @@ namespace com_infra {
 			static void addRequestEnding(char* dest);
 			/** Extracts the HTTP response code from src and writes it to dest */
 			static void getHttpResponseCode(char* dest, char* src);
+			
 			/** Returns true if HTTP response code is HTTP/1.1 200 OK */
-			static bool isOKresponse(char* response);
+			bool isOKresponse(char* response);
 
 			/** Size with which to allocate char arrays */
 			static const size_t kAllocSize = 512;
+
+			/** Expected response code (default: HTTP/1.1 200 OK) */
+			char mExpectedRspCode[kAllocSize];
 		};
 	}
 

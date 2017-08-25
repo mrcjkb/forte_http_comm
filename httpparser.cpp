@@ -49,7 +49,7 @@
 
 using namespace forte::com_infra;
 
-CHttpParser::CHttpParser(){
+CHttpParser::CHttpParser() : mExpectedRspCode("HTTP/1.1 200 OK") {
 }
 
 CHttpParser::~CHttpParser(){
@@ -105,7 +105,7 @@ bool CHttpParser::parseGetResponse(char* dest, char* src) {
 
 bool CHttpParser::parsePutResponse(char* dest, char* src) {
 	if (CHttpParser::isOKresponse(src)) {
-		strcpy(dest, "HTTP/1.1 200 OK");
+		strcpy(dest, mExpectedRspCode);
 		return true;
 	}
 	CHttpParser::getHttpResponseCode(dest, src);
@@ -118,5 +118,9 @@ void CHttpParser::getHttpResponseCode(char* dest, char* src) {
 }
 
 bool CHttpParser::isOKresponse(char* response) {
-	return nullptr != strstr(response, "HTTP/1.1 200 OK");
+	return nullptr != strstr(response, mExpectedRspCode);
+}
+
+void CHttpParser::setExpectedRspCode(const char* rsp) {
+	strcpy(mExpectedRspCode, rsp);
 }
