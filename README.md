@@ -30,18 +30,18 @@ example: http[144.12.131.2:80/rest/battery/voltage]
   To adjust the parsing of requests and responses, change the CHttpParser class accordingly.
 * In the long run, a factory for the CHttpParser may be implemented.
 * The following IEC 61499 data types are currently NOT supported for PUT requests: DATE, TIME_OF_DAY, arrays, structs
-  
-
-By default, a GET request is sent as: <br />
-"GET /path HTTP/1.1 <br />
-Host: ip:port" <br />
-<br />
-a PUT request is sent as: <br />
-"PUT /path HTTP/1.1 <br />
-Host: ip:port <br />
-Content-type: text/html <br />
-Content-length: *length_of_data_string* <br />
-<br />
-<br />
-data_string"
-
+* By default, a GET request is sent as: <br />
+  GET /path HTTP/1.1 <br />
+  Host: ip:port" <br />
+  <br />
+* By default, a PUT request is sent as: <br />
+  PUT /path HTTP/1.1 <br />
+  Host: ip:port <br />
+  Content-type: text/html <br />
+  Content-length: length_of_data_string <br />
+  <br />
+  <br />
+  data_string
+* If the CLIENT function block has a data output, the HTTP response code (e.g., "HTTP/1.1 404 Not found") is output
+  along with a "SEND_FAILED" status output in the case of an unexpected response.
+  The expected response code is "HTTP/1.1 200 OK".
