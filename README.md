@@ -22,7 +22,7 @@ http[ip:port/path;expected_response_code]
 * path: The path in the URL
 * expected_response_code (optional): The expected HTTP response code (= "HTTP/1.1 200 OK" if none is specified)
 
-examples: http[144.12.131.2:80/rest/battery/voltage]
+examples: http[144.12.131.2:80/rest/battery/voltage] <br />
 		  http[144.12.131.2:80/rest/battery/voltage;HTTP/1.1 201 Created]
 
 # Notes
