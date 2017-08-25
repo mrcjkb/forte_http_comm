@@ -15,7 +15,7 @@ Simple HTTP Com Layer for 4diac-RTE (FORTE)
 * Other function blocks are currently not supported and may result in unexpected behaviour.
 
 # Parameters
-http[ip:port/path]
+http[ip:port/path] <br />
 http[ip:port/path;expected_response_code]
 * ip: The IP address
 * port: The port number
