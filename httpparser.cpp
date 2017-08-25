@@ -90,26 +90,33 @@ void CHttpParser::addRequestEnding(char* dest) {
 }
 
 bool CHttpParser::parseGetResponse(char* dest, char* src) {
-	if (nullptr == strstr(src, "HTTP/1.1 200 OK")) {
-		// Copy response to output
-		sscanf(src, "/s[^/n]", dest);
-		return false;
+	if (CHttpParser::isOKresponse(src)) {
+		// Extract data from HTTP GET respnse char
+		char* data = strstr(src, "\r\n\r\n");
+		if (nullptr != data) {
+			data += 4;
+			sscanf(data, "%s[^/n])", dest);
+		}
+		return true;
 	}
-	// Extract data from HTTP GET respnse char
-	char* data = strstr(src, "\r\n\r\n");
-	if (nullptr != data) {
-		data += 4;
-		sscanf(data, "%s[^/n])", dest);
-	}
-	return true;
+	CHttpParser::getHttpResponseCode(dest, src);
+	return false;
 }
 
 bool CHttpParser::parsePutResponse(char* dest, char* src) {
-	if (nullptr == strstr(src, "HTTP/1.1 200 OK")) {
-		// Copy response to output
-		sscanf(src, "/s[^/n]", dest);
-		return false;
+	if (CHttpParser::isOKresponse(src)) {
+		strcpy(dest, "HTTP/1.1 200 OK");
+		return true;
 	}
-	strcpy(dest, "HTTP/1.1 200 OK");
-	return true;
+	CHttpParser::getHttpResponseCode(dest, src);
+	return false;
+}
+
+void CHttpParser::getHttpResponseCode(char* dest, char* src) {
+	char* tmp = strtok(src, "\r\n");
+	memcpy(dest, tmp, strlen(tmp) + 1);
+}
+
+bool CHttpParser::isOKresponse(char* response) {
+	return nullptr != strstr(response, "HTTP/1.1 200 OK");
 }

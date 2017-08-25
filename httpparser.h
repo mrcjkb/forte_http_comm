@@ -88,6 +88,10 @@ namespace com_infra {
 			static void addHost(char* dest, const char* host);
 			/** Appends the ending "\r\n\r\n" to the HTTP request */
 			static void addRequestEnding(char* dest);
+			/** Extracts the HTTP response code from src and writes it to dest */
+			static void getHttpResponseCode(char* dest, char* src);
+			/** Returns true if HTTP response code is HTTP/1.1 200 OK */
+			static bool isOKresponse(char* response);
 
 			/** Size with which to allocate char arrays */
 			static const size_t kAllocSize = 512;
