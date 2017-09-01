@@ -47,7 +47,7 @@
 #ifndef _HTTPIPPARSER_H_
 #define _HTTPIPPARSER_H_
 
-
+#include <stdio.h>
 
 namespace forte {
 

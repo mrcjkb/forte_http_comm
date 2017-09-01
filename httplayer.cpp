@@ -56,12 +56,13 @@ using namespace forte::com_infra;
 
 CHttpComLayer::CHttpComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
+	mNumRequestAttempts(0),
 	mHttpParser(CHttpParser()){
 }
 
 CHttpComLayer::~CHttpComLayer(){
 	delete m_poBottomLayer;
-	m_poBottomLayer = nullptr;
+	m_poBottomLayer = 0;
 }
 
 void CHttpComLayer::closeConnection(){
@@ -81,9 +82,9 @@ void CHttpComLayer::closeConnection(){
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerParameter){
 	EComResponse eRetVal = e_InitInvalidId;
-	if (nullptr != strchr(pa_acLayerParameter, ';')) {
+	if (0 != strchr(pa_acLayerParameter, ';')) {
 		strtok(pa_acLayerParameter, ";");
-		char* expectedRspCode = strtok(nullptr, ";");
+		char* expectedRspCode = strtok(0, ";");
 		mHttpParser.setExpectedRspCode(expectedRspCode);
 	}
 	switch (m_poFb->getComServiceType()) {

@@ -101,7 +101,7 @@ namespace forte {
 		/** Indicates whether the expected HTTP response has been received or not */
 		bool mRspReceived;
 		/** Number of request attempts */
-		TForteByte mNumRequestAttempts = 0;
+		TForteByte mNumRequestAttempts;
 		
 	};
 
