@@ -41,6 +41,8 @@
 *
 *
 ********************************************************************************
+* THIS COM LAYER HAS BEEN DEPRECATED!
+*
 * IP Com Layer used by the HTTP Com Layer.
 * This class is exactly the same as the CIPComLayer, but the processInterrupt() method
 * is overloaded to allow server-side disconnections without notifying the function block.
