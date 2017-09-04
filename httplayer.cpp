@@ -44,7 +44,7 @@
 * HTTP Com Layer
 ********************************************************************************/
 #include "httplayer.h"
-#include "httpiplayer.h"
+#include "ipcomlayer.h"
 #include "../../arch/devlog.h"
 #include "commfb.h"
 // TODO remove #include "comlayersmanager.h"
@@ -56,7 +56,6 @@ using namespace forte::com_infra;
 
 CHttpComLayer::CHttpComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
-	mNumRequestAttempts(0),
 	mHttpParser(CHttpParser()){
 }
 
@@ -69,14 +68,6 @@ void CHttpComLayer::closeConnection(){
 	m_eConnectionState = e_Disconnected;
 	if (0 != m_poBottomLayer) {
 		m_poBottomLayer->closeConnection();
-		// Re-open connection and wait for response from peer if the expected response has not been received.
-		if (!mRspReceived && mNumRequestAttempts <= kMaxRequestAttempts) {
-			if (0 != mLastRequest && 0 != m_poBottomLayer) {
-				m_poBottomLayer->sendData(mLastRequest, strlen(mLastRequest) + 1);
-			}
-		} else {
-			mNumRequestAttempts = 0; // reset number of request attemts and do nothing.
-		}
 	}
 }
 
@@ -139,8 +130,6 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection() {
 
 EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
   EComResponse eRetVal = e_ProcessDataOk;
-  mNumRequestAttempts += 1;
-  mRspReceived = false;
   switch (m_poFb->getComServiceType()){
 	  case e_Server:
 		  // TODO: Currently not implemented.
@@ -216,8 +205,6 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			break;
 		}
 	}
-	mRspReceived = true;
-	mNumRequestAttempts = 0; // reset
 	return eRetVal;
 }
 
