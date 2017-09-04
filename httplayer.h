@@ -86,7 +86,7 @@ namespace forte {
 		/** Size with which to allocate char arrays */
 		static const size_t kAllocSize = 512;
 		/** Maximum number of resend attempts for requests */
-		static const int kMaxRequestAttempts = 2147483647;
+		static const TForteByte kMaxRequestAttempts = 10;
 
 		/** Handles the parsing of HTTP requests */
 		CHttpParser mHttpParser;
@@ -101,7 +101,7 @@ namespace forte {
 		/** Indicates whether the expected HTTP response has been received or not */
 		bool mRspReceived;
 		/** Number of request attempts */
-		int mNumRequestAttempts;
+		TForteByte mNumRequestAttempts;
 		
 	};
 
