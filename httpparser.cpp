@@ -115,7 +115,9 @@ bool CHttpParser::parsePutResponse(char* dest, char* src) {
 
 void CHttpParser::getHttpResponseCode(char* dest, char* src) {
 	char* tmp = strtok(src, "\r\n");
-	memcpy(dest, tmp, strlen(tmp) + 1);
+	if (tmp != 0) {
+		memcpy(dest, tmp, strlen(tmp) + 1);
+	}
 }
 
 bool CHttpParser::isOKresponse(char* response) {

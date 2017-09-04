@@ -44,10 +44,9 @@
 * HTTP Com Layer
 ********************************************************************************/
 #include "httplayer.h"
-#include "ipcomlayer.h"
+#include "httpiplayer.h"
 #include "../../arch/devlog.h"
 #include "commfb.h"
-// TODO remove #include "comlayersmanager.h"
 #include "../../core/datatypes/forte_dint.h"
 #include <stdio.h>
 #include <string.h>
@@ -94,15 +93,18 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		else {
 			m_eRequestType = e_GET;
 		}
-		// Copy params for later use in sendData()
-		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 		if (m_poBottomLayer == 0) {
-			m_poBottomLayer = new CIPComLayer(this, m_poFb);
+			m_poBottomLayer = new CHttpIPComLayer(this, m_poFb);
 			if (m_poBottomLayer == 0) {
 				eRetVal = e_InitInvalidId;
 				return eRetVal;
 			}
 		}
+		char ipParams[kAllocSize]; // address + port for CIPComLayer
+		// Copy params for later use by HTTP parser ()
+		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
+		sscanf(pa_acLayerParameter, "%99[^/]", ipParams); // Extract address & port for IP com layer
+		m_poBottomLayer->openConnection(ipParams, "/0");
 		m_eConnectionState = e_Disconnected;
 		break;
 	}
@@ -116,16 +118,8 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 }
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection() {
-	char ipParams[kAllocSize]; // address + port for CIPComLayer
-	sscanf(mParams, "%99[^/]", ipParams); // Extract address & port from mParams
-	EComResponse eRetVal = m_poBottomLayer->openConnection(ipParams, "\0"); // open connection of bottom layer
-	if (e_InitOk == eRetVal) {
-		m_eConnectionState = e_Connected;
-	}
-	else {
-		m_eConnectionState = e_Disconnected;
-	}
-	return eRetVal;
+	// Actual connection opening and closing is handled by the HTTP IP com layer
+	return e_Nothing;
 }
 
 EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
@@ -149,9 +143,6 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
 			  }
 			  mHttpParser.createPutRequest(request, mParams, mReqData);
 		  }
-		  mLastRequest = new char[kAllocSize];
-		  memcpy(mLastRequest, request, kAllocSize);
-		  openConnection();
 		  eRetVal = m_poBottomLayer->sendData(request, strlen(request) + 1);
 		  break;
 	  }
@@ -175,9 +166,6 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			break;
 		case e_Client:
 		{
-			// Close the connection to avoid processInterrupt() call when peer closes connection
-			m_poBottomLayer->closeConnection();
-			m_eConnectionState = e_Disconnected;
 			// Interpret HTTP response and set output status according to success/failure.
 			char output[kAllocSize];
 			bool success = true;

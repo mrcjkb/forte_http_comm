@@ -68,6 +68,9 @@ namespace forte {
 
 		void closeConnection();
 
+		/** Size with which to allocate char arrays */
+		static const size_t kAllocSize = 512;
+
 
 	  private:
 		EComResponse openConnection(char *pa_acLayerParameter);
@@ -82,9 +85,6 @@ namespace forte {
 			/** HTTP PUT */
 			e_PUT
 		};
-
-		/** Size with which to allocate char arrays */
-		static const size_t kAllocSize = 512;
 
 		/** Handles the parsing of HTTP requests */
 		CHttpParser mHttpParser;
