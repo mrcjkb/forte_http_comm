@@ -55,21 +55,73 @@
 
 using namespace forte::com_infra;
 
-CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
-    CIPComLayer(pa_poUpperLayer, pa_poComFB) {
+CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB, char* pa_acLayerParameter) :
+	CIPComLayer(pa_poUpperLayer, pa_poComFB),
+	mNumRequestAttempts(0) {
+	// Copy params for later use in sendData()
+	memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 }
 
 CHttpIPComLayer::~CHttpIPComLayer(){
 }
 
+EComResponse forte::com_infra::CHttpIPComLayer::sendData(void * pa_pvData, unsigned int pa_unSize) {
+	mRspReceived = false;
+	mNumRequestAttempts += 1;
+	char* request = static_cast<char*> (pa_pvData);
+	memcpy(mLastRequest, request, kAllocSize);
+	openConnection();
+	return CIPComLayer::sendData(pa_pvData, pa_unSize);
+}
+
+EComResponse CHttpIPComLayer::recvData(const void *pa_pvData, unsigned int) {
+	mRspReceived = true;
+	mNumRequestAttempts = 0;
+	EComResponse eRetVal = e_Nothing;
+	eRetVal = CIPComLayer::recvData(pa_pvData, 0);
+	while (!mRspReceived && e_ProcessDataOk != eRetVal && mNumRequestAttempts <= kMaxRequestAttempts) {
+		resetConnection();
+		CIPComLayer::recvData(mRecvBuffer, 0);
+	}
+	return eRetVal;
+}
+
 EComResponse CHttpIPComLayer::processInterrupt() {
 	EComResponse eRetVal = CIPComLayer::processInterrupt();
-	if (e_ProcessDataOk != eRetVal) {
+	// Close the connection to avoid further processInterrupt() calls
+	closeConnection();
+	while (!mRspReceived && e_ProcessDataOk != eRetVal && mNumRequestAttempts <= kMaxRequestAttempts) {
+		eRetVal = e_Nothing;
+		resetConnection();
+		CIPComLayer::recvData(mRecvBuffer, 0);
+	}
+	if (0 == eRetVal) {
 		eRetVal = e_Nothing;
 	}
-	if (0 != m_poTopLayer) {
-		// Ensure above com layer's status is set to closed
-		m_poTopLayer->closeConnection();
+	return eRetVal;
+}
+
+void forte::com_infra::CHttpIPComLayer::resetConnection() {
+	m_eConnectionState = e_Disconnected;
+	closeConnection();
+	// Re-open connection and wait for response from peer if the expected response has not been received.
+	if (!mRspReceived && mNumRequestAttempts <= kMaxRequestAttempts && 0 != mLastRequest) {
+		EComResponse eRetVal = sendData(mLastRequest, strlen(mLastRequest) + 1);
+		if (e_ProcessDataOk != eRetVal) {
+			Sleep(0);
+		}
+	}
+	else {
+		mNumRequestAttempts = 0; // reset number of request attemts and do nothing.
+	}
+}
+
+EComResponse forte::com_infra::CHttpIPComLayer::openConnection() {
+	char ipParams[kAllocSize]; // address + port for CIPComLayer
+	memcpy(ipParams, mParams, kAllocSize); // Create copy so that data is not lost
+	EComResponse eRetVal = CComLayer::openConnection(ipParams, "\0"); // open connection of bottom layer
+	if (e_InitOk == eRetVal) { // unsuccessful connection
+		m_eConnectionState = e_Connected;
 	}
 	return eRetVal;
 }
