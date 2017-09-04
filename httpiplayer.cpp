@@ -64,7 +64,7 @@ CHttpIPComLayer::~CHttpIPComLayer(){
 
 EComResponse CHttpIPComLayer::processInterrupt() {
 	EComResponse eRetVal = CIPComLayer::processInterrupt();
-	if (e_InitTerminated == eRetVal) {
+	if (e_ProcessDataOk != eRetVal) {
 		eRetVal = e_Nothing;
 	}
 	if (0 != m_poTopLayer) {
