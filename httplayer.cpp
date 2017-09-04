@@ -66,18 +66,18 @@ CHttpComLayer::~CHttpComLayer(){
 }
 
 void CHttpComLayer::closeConnection(){
-	m_eConnectionState = e_Disconnected;
 	if (0 != m_poBottomLayer) {
 		m_poBottomLayer->closeConnection();
 		// Re-open connection and wait for response from peer if the expected response has not been received.
 		if (!mRspReceived && mNumRequestAttempts <= kMaxRequestAttempts) {
-			if (0 != mLastRequest && 0 != m_poBottomLayer) {
-				m_poBottomLayer->sendData(mLastRequest, strlen(mLastRequest) + 1);
-			}
-		} else {
+			openConnection();
+			m_poBottomLayer->sendData(mLastRequest, strlen(mLastRequest) + 1);
+		}
+		else {
 			mNumRequestAttempts = 0; // reset number of request attemts and do nothing.
 		}
 	}
+	m_eConnectionState = e_Disconnected;
 }
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerParameter){
@@ -106,7 +106,8 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		// Copy params for later use in sendData()
 		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 		if (m_poBottomLayer == 0) {
-			m_poBottomLayer = new CIPComLayer(this, m_poFb);
+			// TODO remove m_poBottomLayer = CComLayersManager::createCommunicationLayer("ip", this, m_poFb); // create bottom layer
+			m_poBottomLayer = new CHttpIPComLayer(this, m_poFb);
 			if (m_poBottomLayer == 0) {
 				eRetVal = e_InitInvalidId;
 				return eRetVal;
@@ -125,14 +126,15 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 }
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection() {
+	EComResponse eRetVal = e_InitOk;
 	char ipParams[kAllocSize]; // address + port for CIPComLayer
 	sscanf(mParams, "%99[^/]", ipParams); // Extract address & port from mParams
-	EComResponse eRetVal = m_poBottomLayer->openConnection(ipParams, "\0"); // open connection of bottom layer
-	if (e_InitOk == eRetVal) {
+	if (e_Disconnected == m_eConnectionState) {
+		EComResponse eConnectRsp = m_poBottomLayer->openConnection(ipParams, "\0"); // open connection of bottom layer
+		if (e_InitOk != eConnectRsp) { // unsuccessful connection
+			return eConnectRsp;
+		}
 		m_eConnectionState = e_Connected;
-	}
-	else {
-		m_eConnectionState = e_Disconnected;
 	}
 	return eRetVal;
 }
@@ -162,7 +164,7 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
 		  }
 		  mLastRequest = new char[kAllocSize];
 		  memcpy(mLastRequest, request, kAllocSize);
-		  openConnection();
+		  eRetVal = openConnection();
 		  eRetVal = m_poBottomLayer->sendData(request, strlen(request) + 1);
 		  break;
 	  }
@@ -186,7 +188,7 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			break;
 		case e_Client:
 		{
-			// Close the connection to avoid processInterrupt() call when peer closes connection
+			// Close the connection to avoid processInterrupt() call
 			m_poBottomLayer->closeConnection();
 			m_eConnectionState = e_Disconnected;
 			// Interpret HTTP response and set output status according to success/failure.

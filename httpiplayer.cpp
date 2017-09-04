@@ -41,8 +41,6 @@
 *
 *
 ********************************************************************************
-* THIS COM LAYER HAS BEEN DEPRECATED!
-*
 * IP Com Layer used by the HTTP Com Layer.
 * This class is exactly the same as the CIPComLayer, but the processInterrupt() method
 * is overloaded to allow server-side disconnections without notifying the function block.
@@ -64,15 +62,14 @@ CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB
 CHttpIPComLayer::~CHttpIPComLayer(){
 }
 
-[[deprecated("The HTTP com layer now uses FORTE's builtin IP com layer.")]]
 EComResponse CHttpIPComLayer::processInterrupt() {
 	EComResponse eRetVal = CIPComLayer::processInterrupt();
-	if (e_ProcessDataOk != eRetVal && 0 != m_poTopLayer) {
+	if (e_InitTerminated == eRetVal) {
+		eRetVal = e_Nothing;
+	}
+	if (0 != m_poTopLayer) {
 		// Ensure above com layer's status is set to closed
 		m_poTopLayer->closeConnection();
-		// Prevent function block from issuing an INIT- event,
-		// since interrupts can be quite frequent occurences
-		eRetVal = e_Nothing;
 	}
 	return eRetVal;
 }
