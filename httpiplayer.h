@@ -57,10 +57,31 @@ namespace forte {
 
     class CHttpIPComLayer : public CIPComLayer{
       public:
-		CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB);
+		CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB, char* pa_acLayerParameter);
         virtual ~CHttpIPComLayer();
 
+		EComResponse sendData(void *pa_pvData, unsigned int pa_unSize);
+		EComResponse recvData(const void *pa_pvData, unsigned int pa_unSize);
 		EComResponse processInterrupt();
+
+	private:
+		void resetConnection();
+		EComResponse openConnection();
+
+		/** Size with which to allocate char arrays */
+		static const size_t kAllocSize = 512;
+		/** Maximum number of resend attempts for requests */
+		static const int kMaxRequestAttempts = 100;
+
+		/** IP connection parameters */
+		char mParams[kAllocSize];
+		/** Last HTTP request */
+		char mLastRequest[kAllocSize];
+		/** Indicates whether the expected HTTP response has been received or not */
+		bool mRspReceived;
+		/** Number of request attempts */
+		int mNumRequestAttempts;
+		char mRecvBuffer[cg_unIPLayerRecvBufferSize];
     };
 
   }
