@@ -47,6 +47,7 @@
 #include "httpiplayer.h"
 #include "../../arch/devlog.h"
 #include "commfb.h"
+// TODO remove #include "comlayersmanager.h"
 #include "../../core/datatypes/forte_dint.h"
 #include <stdio.h>
 #include <string.h>
@@ -55,6 +56,7 @@ using namespace forte::com_infra;
 
 CHttpComLayer::CHttpComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
+	mNumRequestAttempts(0),
 	mHttpParser(CHttpParser()){
 }
 
@@ -64,10 +66,18 @@ CHttpComLayer::~CHttpComLayer(){
 }
 
 void CHttpComLayer::closeConnection(){
-	m_eConnectionState = e_Disconnected;
 	if (0 != m_poBottomLayer) {
 		m_poBottomLayer->closeConnection();
+		// Re-open connection and wait for response from peer if the expected response has not been received.
+		if (!mRspReceived && mNumRequestAttempts <= kMaxRequestAttempts) {
+			openConnection();
+			m_poBottomLayer->sendData(mLastRequest, strlen(mLastRequest) + 1);
+		}
+		else {
+			mNumRequestAttempts = 0; // reset number of request attemts and do nothing.
+		}
 	}
+	m_eConnectionState = e_Disconnected;
 }
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerParameter){
@@ -93,6 +103,17 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		else {
 			m_eRequestType = e_GET;
 		}
+		// Copy params for later use in sendData()
+		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
+		if (m_poBottomLayer == 0) {
+			// TODO remove m_poBottomLayer = CComLayersManager::createCommunicationLayer("ip", this, m_poFb); // create bottom layer
+			m_poBottomLayer = new CHttpIPComLayer(this, m_poFb);
+			if (m_poBottomLayer == 0) {
+				eRetVal = e_InitInvalidId;
+				return eRetVal;
+			}
+		}
+		m_eConnectionState = e_Disconnected;
 		break;
 	}
 	case e_Publisher:
@@ -101,24 +122,18 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		eRetVal = e_ProcessDataInvalidObject;
 		break;
 	}
-	// Copy params for later use in sendData()
-	memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
-	if (m_poBottomLayer == 0) {
-		m_poBottomLayer = new CHttpIPComLayer(this, m_poFb, pa_acLayerParameter);
-		if (m_poBottomLayer == 0) {
-			eRetVal = e_InitInvalidId;
-			return eRetVal;
-		}
-	}
-	m_eConnectionState = e_Disconnected;
 	return eRetVal;
 }
 
 EComResponse forte::com_infra::CHttpComLayer::openConnection() {
+	EComResponse eRetVal = e_InitOk;
 	char ipParams[kAllocSize]; // address + port for CIPComLayer
 	sscanf(mParams, "%99[^/]", ipParams); // Extract address & port from mParams
-	EComResponse eRetVal = m_poBottomLayer->openConnection(ipParams, "\0"); // open connection of bottom layer
-	if (e_InitOk == eRetVal) { // unsuccessful connection
+	if (e_Disconnected == m_eConnectionState) {
+		EComResponse eConnectRsp = m_poBottomLayer->openConnection(ipParams, "\0"); // open connection of bottom layer
+		if (e_InitOk != eConnectRsp) { // unsuccessful connection
+			return eConnectRsp;
+		}
 		m_eConnectionState = e_Connected;
 	}
 	return eRetVal;
@@ -126,6 +141,8 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection() {
 
 EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
   EComResponse eRetVal = e_ProcessDataOk;
+  mNumRequestAttempts += 1;
+  mRspReceived = false;
   switch (m_poFb->getComServiceType()){
 	  case e_Server:
 		  // TODO: Currently not implemented.
@@ -145,6 +162,9 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
 			  }
 			  mHttpParser.createPutRequest(request, mParams, mReqData);
 		  }
+		  mLastRequest = new char[kAllocSize];
+		  memcpy(mLastRequest, request, kAllocSize);
+		  eRetVal = openConnection();
 		  eRetVal = m_poBottomLayer->sendData(request, strlen(request) + 1);
 		  break;
 	  }
@@ -168,6 +188,9 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			break;
 		case e_Client:
 		{
+			// Close the connection to avoid processInterrupt() call
+			m_poBottomLayer->closeConnection();
+			m_eConnectionState = e_Disconnected;
 			// Interpret HTTP response and set output status according to success/failure.
 			char output[kAllocSize];
 			bool success = true;
@@ -195,6 +218,8 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 			break;
 		}
 	}
+	mRspReceived = true;
+	mNumRequestAttempts = 0; // reset
 	return eRetVal;
 }
 
