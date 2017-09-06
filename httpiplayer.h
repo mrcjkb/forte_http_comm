@@ -75,7 +75,7 @@ namespace forte {
 		static void closeSocket(CIPComSocketHandler::TSocketDescriptor *pa_nSocketID);
 
 		/** Connection time out in s */
-		const double kTimeOutS = 10;
+		const double kTimeOutS = 20;
 
 		EComResponse openConnection(char *pa_acLayerParameter);
 		EComResponse openConnection();

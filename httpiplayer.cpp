@@ -78,7 +78,7 @@ void CHttpIPComLayer::closeConnection() {
 }
 
 EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) {
-	EComResponse eRetVal = e_Nothing;
+	EComResponse eRetVal = e_ProcessDataSendFailed;
 	if (0 != m_poFb) {
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
@@ -118,8 +118,8 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			}
 			if (e_ProcessDataOk == m_eInterruptResp) {
 				eRetVal = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
-				closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
 			}
+			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
 			m_eInterruptResp = eRetVal;
 			break;
 		}
@@ -129,13 +129,12 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			break;
 		}
 	}
-	if (e_ProcessDataOk == m_eInterruptResp) {
-		// Ensure CNF event output is sent
-		m_poFb->interruptCommFB(this);
-		CEventChainExecutionThread *poEventChainExecutor = m_poFb->getEventChainExecutor();
-		m_poFb->receiveInputEvent(cg_nExternalEventID, *poEventChainExecutor);
-	}
-	return m_eInterruptResp;
+	// Ensure event output is sent (sendData does not trigger e_ProcessDataOk events for clients/servers/subscribers)
+	m_poFb->interruptCommFB(this);
+	CEventChainExecutionThread *poEventChainExecutor = m_poFb->getEventChainExecutor();
+	m_poFb->receiveInputEvent(cg_nExternalEventID, *poEventChainExecutor);
+	// Make sure sendData() does not trigger additional INIT- event in case of failure
+	return e_Nothing;
 }
 
 EComResponse CHttpIPComLayer::processInterrupt() {
