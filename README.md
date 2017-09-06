@@ -49,5 +49,3 @@ http[144.12.131.2:80/rest/battery/voltage;HTTP/1.1 201 Created]
 * If the CLIENT function block has a data output, the HTTP response code (e.g., "HTTP/1.1 404 Not found") is output
   along with a "SEND_FAILED" status output in the case of an unexpected response.
   The default expected response code is "HTTP/1.1 200 OK".
-* Currently, only one expected response code is supported. This may be changed in the future, so that users can
-  specify a set of expected response codes.
