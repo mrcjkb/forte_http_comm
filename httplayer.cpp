@@ -104,7 +104,6 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		// Copy params for later use by HTTP parser ()
 		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 		sscanf(pa_acLayerParameter, "%99[^/]", ipParams); // Extract address & port for IP com layer
-		m_poBottomLayer->openConnection(ipParams, "/0");
 		m_eConnectionState = e_Disconnected;
 		break;
 	}
