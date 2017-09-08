@@ -92,7 +92,7 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			break;
 		case e_Client:
 		{
-			bool dataReceived = false;
+			bool withinTimeoutPeriod = true;
 			closeConnection(); // In case it is currently open
 			char* request = static_cast<char*>(pa_pvData);
 			m_unBufFillSize = 0;
@@ -100,7 +100,8 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			time_t start; // for timeout
 			time_t timer;
 			time(&start);
-			while (0 == m_acRecvBuffer || m_unBufFillSize <= 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n")) {
+			// Loop runs until the end of the time out period or until the HTTP response has been received completely
+			while (withinTimeoutPeriod && (0 == m_acRecvBuffer || m_unBufFillSize <= 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
 				if (e_Connected != m_eConnectionState) {
 					m_unBufFillSize = 0;
 					m_acRecvBuffer[0] = 0;
@@ -108,12 +109,14 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				}
 				if (0
 					>= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
-					eRetVal = e_InitTerminated;
+					eRetVal = e_ProcessDataSendFailed;
+					m_eInterruptResp = eRetVal;
 				}
 				handledConnectedDataRecv();
 				if (difftime(time(&timer), start) > kTimeOutS) { // Timeout?
 					eRetVal = e_ProcessDataSendFailed;
-					break;
+					m_eInterruptResp = eRetVal;
+					withinTimeoutPeriod = false;
 				}
 			}
 			if (e_ProcessDataOk == m_eInterruptResp) {
