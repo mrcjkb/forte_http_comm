@@ -55,7 +55,8 @@ using namespace forte::com_infra;
 
 CHttpComLayer::CHttpComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
-	mHttpParser(CHttpParser()){
+	mHttpParser(CHttpParser()),
+	m_eRequestType(e_NOTSET) {
 }
 
 CHttpComLayer::~CHttpComLayer(){

@@ -59,7 +59,7 @@ CHttpParser::~CHttpParser(){
 void CHttpParser::createGetRequest(char* dest, const char* params) {
 	char ipParams[kAllocSize]; // address + port
 	char path[kAllocSize]; // path for HTTP request
-	sscanf(params, "%99[^/]/%s[^/n]", ipParams, path);
+	sscanf(params, "%99[^/]/%511s[^/n]", ipParams, path);
 	strcpy(dest, "GET /");
 	strcat(dest, path);
 	CHttpParser::addHost(dest, ipParams);
@@ -69,7 +69,7 @@ void CHttpParser::createGetRequest(char* dest, const char* params) {
 void CHttpParser::createPutRequest(char* dest, const char* params, const char* data) {
 	char ipParams[kAllocSize]; // address + port
 	char path[kAllocSize]; // path for HTTP request
-	sscanf(params, "%99[^/]/%s[^/n]", ipParams, path);
+	sscanf(params, "%99[^/]/%511s[^/n]", ipParams, path);
 	strcpy(dest, "PUT /");
 	strcat(dest, path);
 	CHttpParser::addHost(dest, ipParams);
@@ -96,7 +96,7 @@ bool CHttpParser::parseGetResponse(char* dest, char* src) {
 		char* data = strstr(src, "\r\n\r\n");
 		if (0 != data) {
 			data += 4;
-			sscanf(data, "%s[^/n])", dest);
+			sscanf(data, "%1499s[^/n])", dest);
 		}
 		return true;
 	}

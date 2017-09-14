@@ -83,7 +83,9 @@ namespace forte {
 			/** HTTP GET */
 			e_GET,
 			/** HTTP PUT */
-			e_PUT
+			e_PUT,
+			/** not ready */
+			e_NOTSET,
 		};
 
 		/** Handles the parsing of HTTP requests */

@@ -63,7 +63,7 @@ CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB
 	m_nSocketID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
 	m_nListeningID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
 	m_eInterruptResp(e_Nothing),
-	m_unBufFillSize(0) {
+	m_unBufFillSize(0){
 }
 
 CHttpIPComLayer::~CHttpIPComLayer() {
@@ -101,7 +101,7 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			time_t timer;
 			time(&start);
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
-			while (withinTimeoutPeriod && (0 == m_acRecvBuffer || m_unBufFillSize <= 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+			while (withinTimeoutPeriod && (0 == m_acRecvBuffer || m_unBufFillSize == 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
 				if (e_Connected != m_eConnectionState) {
 					m_unBufFillSize = 0;
 					m_acRecvBuffer[0] = 0;
