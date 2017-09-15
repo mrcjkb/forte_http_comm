@@ -60,11 +60,11 @@ using namespace forte::com_infra;
 
 CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
+	kTimeOutS(20),
 	m_nSocketID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
 	// m_nListeningID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
 	m_eInterruptResp(e_Nothing),
-	m_unBufFillSize(0),
-	kTimeOutS(20){
+	m_unBufFillSize(0){
 }
 
 CHttpIPComLayer::~CHttpIPComLayer() {
