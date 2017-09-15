@@ -91,6 +91,8 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			break;
 		case e_Client:
 		{
+			m_unBufFillSize = 0;
+			m_acRecvBuffer[0] = 0;
 			bool withinTimeoutPeriod = true;
 			closeConnection(); // In case it is currently open
 			const char* requestCache = static_cast<char*>(pa_pvData);
@@ -98,7 +100,12 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			time_t timer;
 			time(&start);
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
-			while (withinTimeoutPeriod && (0 == m_acRecvBuffer || m_unBufFillSize == 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+			while (withinTimeoutPeriod && (m_unBufFillSize == 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+#ifdef WIN32
+					Sleep(0);
+#else
+					sleep(0);
+#endif
 				if (e_Connected != m_eConnectionState) {
 					m_unBufFillSize = 0;
 					m_acRecvBuffer[0] = 0;
