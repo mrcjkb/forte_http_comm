@@ -96,9 +96,6 @@ namespace forte {
 		char mParams[kAllocSize];
 		/** Data to be sent */
 		char mReqData[kAllocSize];
-		/** Last HTTP request */
-		char* mLastRequest;
-		
 	};
 
   }

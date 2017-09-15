@@ -60,8 +60,8 @@ void CHttpParser::createGetRequest(char* dest, const char* params) {
 	char ipParams[kAllocSize]; // address + port
 	char path[kAllocSize]; // path for HTTP request
 	sscanf(params, "%99[^/]/%511s[^/n]", ipParams, path);
-	strcpy(dest, "GET /");
-	strcat(dest, path);
+	strncpy(dest, "GET /", 6);
+	strncat(dest, path, kAllocSize);
 	CHttpParser::addHost(dest, ipParams);
 	CHttpParser::addRequestEnding(dest);
 }
@@ -70,24 +70,24 @@ void CHttpParser::createPutRequest(char* dest, const char* params, const char* d
 	char ipParams[kAllocSize]; // address + port
 	char path[kAllocSize]; // path for HTTP request
 	sscanf(params, "%99[^/]/%511s[^/n]", ipParams, path);
-	strcpy(dest, "PUT /");
-	strcat(dest, path);
+	strncpy(dest, "PUT /", 6);
+	strncat(dest, path, kAllocSize);
 	CHttpParser::addHost(dest, ipParams);
-	strcat(dest, "\r\nContent-type: text/html\r\nContent-length: ");
+	strncat(dest, "\r\nContent-type: text/html\r\nContent-length: ", 43);
 	char contentLength[kAllocSize];
 	sprintf(contentLength, "%zu", strlen(data));
-	strcat(dest, contentLength);
+	strncat(dest, contentLength, kAllocSize);
 	CHttpParser::addRequestEnding(dest);
-	strcat(dest, data);
+	strncat(dest, data, kAllocSize);
 }
 
 void CHttpParser::addHost(char* dest, const char* host) {
-	strcat(dest, " HTTP/1.1\r\nHost: ");
-	strcat(dest, host);
+	strncat(dest, " HTTP/1.1\r\nHost: ", 17);
+	strncat(dest, host, kAllocSize);
 }
 
 void CHttpParser::addRequestEnding(char* dest) {
-	strcat(dest, "\r\n\r\n");
+	strncat(dest, "\r\n\r\n", 4);
 }
 
 bool CHttpParser::parseGetResponse(char* dest, char* src) {
@@ -96,10 +96,14 @@ bool CHttpParser::parseGetResponse(char* dest, char* src) {
 		char* data = strstr(src, "\r\n\r\n");
 		if (0 != data) {
 			data += 4;
-			sscanf(data, "%1499s[^/n])", dest);
+			sscanf(data, "%99s[^/n])", dest);
+			return true;
 		}
-		return true;
+		// Empty response received?
+		memcpy(dest, "0\0", 2);
+		return false;
 	}
+	// Bad response received?
 	CHttpParser::getHttpResponseCode(dest, src);
 	return false;
 }
@@ -118,10 +122,16 @@ void CHttpParser::getHttpResponseCode(char* dest, char* src) {
 	if (tmp != 0) {
 		memcpy(dest, tmp, strlen(tmp) + 1);
 	}
+	else {
+		memcpy(dest, "Invalid response\0", 17);
+	}
 }
 
 bool CHttpParser::isOKresponse(char* response) {
-	return 0 != strstr(response, mExpectedRspCode);
+	if (strnlen(response, 16) > 15) {
+		return 0 != strstr(response, mExpectedRspCode);
+	}
+	return false;
 }
 
 void CHttpParser::setExpectedRspCode(const char* rsp) {

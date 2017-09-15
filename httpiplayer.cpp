@@ -61,9 +61,10 @@ using namespace forte::com_infra;
 CHttpIPComLayer::CHttpIPComLayer(CComLayer* pa_poUpperLayer, CCommFB* pa_poComFB) :
 	CComLayer(pa_poUpperLayer, pa_poComFB),
 	m_nSocketID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
-	m_nListeningID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
+	// m_nListeningID(CIPComSocketHandler::scm_nInvalidSocketDescriptor),
 	m_eInterruptResp(e_Nothing),
-	m_unBufFillSize(0){
+	m_unBufFillSize(0),
+	kTimeOutS(20){
 }
 
 CHttpIPComLayer::~CHttpIPComLayer() {
@@ -72,13 +73,11 @@ CHttpIPComLayer::~CHttpIPComLayer() {
 void CHttpIPComLayer::closeConnection() {
 	DEVLOG_DEBUG("CSocketBaseLayer::closeConnection() \n");
 	closeSocket(&m_nSocketID);
-	closeSocket(&m_nListeningID);
-
+	// closeSocket(&m_nListeningID);
 	m_eConnectionState = e_Disconnected;
 }
 
 EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) {
-	EComResponse eRetVal = e_ProcessDataSendFailed;
 	if (0 != m_poFb) {
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
@@ -94,9 +93,7 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 		{
 			bool withinTimeoutPeriod = true;
 			closeConnection(); // In case it is currently open
-			char* request = static_cast<char*>(pa_pvData);
-			m_unBufFillSize = 0;
-			m_acRecvBuffer[0] = 0;
+			const char* requestCache = static_cast<char*>(pa_pvData);
 			time_t start; // for timeout
 			time_t timer;
 			time(&start);
@@ -105,25 +102,25 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				if (e_Connected != m_eConnectionState) {
 					m_unBufFillSize = 0;
 					m_acRecvBuffer[0] = 0;
+					char request[CHttpComLayer::kAllocSize];
+					memcpy(request, requestCache, strlen(requestCache) + 1);
 					openConnection();
-				}
-				if (0
-					>= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
-					eRetVal = e_ProcessDataSendFailed;
-					m_eInterruptResp = eRetVal;
+					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
+						m_eInterruptResp = e_ProcessDataSendFailed;
+					}
 				}
 				handledConnectedDataRecv();
-				if (difftime(time(&timer), start) > kTimeOutS) { // Timeout?
-					eRetVal = e_ProcessDataSendFailed;
-					m_eInterruptResp = eRetVal;
+				if (e_ProcessDataOk != m_eInterruptResp && difftime(time(&timer), start) > kTimeOutS) { // Timeout?
+					m_eInterruptResp = e_ProcessDataSendFailed;
 					withinTimeoutPeriod = false;
 				}
 			}
-			if (e_ProcessDataOk == m_eInterruptResp) {
-				eRetVal = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
-			}
+			EComResponse eBackup = m_eInterruptResp;
 			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
-			m_eInterruptResp = eRetVal;
+			m_eInterruptResp = eBackup;
+			if (e_ProcessDataOk == m_eInterruptResp) {
+				m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
+			}
 			break;
 		}
 		case e_Publisher:
@@ -144,7 +141,7 @@ EComResponse CHttpIPComLayer::processInterrupt() {
 	return m_eInterruptResp;
 }
 
-EComResponse CHttpIPComLayer::recvData(const void *pa_pvData, unsigned int) {
+EComResponse CHttpIPComLayer::recvData(const void*, unsigned int) {
 	// Data is received in the sendData method.
 	return e_Nothing;
 }

@@ -123,7 +123,7 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection() {
 	return e_Nothing;
 }
 
-EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
+EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int){
   EComResponse eRetVal = e_ProcessDataOk;
   switch (m_poFb->getComServiceType()){
 	  case e_Server:
@@ -156,7 +156,7 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int pa_unSize){
   return eRetVal;
 }
 
-EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSize){
+EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int){
 	char* recvData = (char*) pa_pvData;
 	EComResponse eRetVal = e_Nothing;
 	if (m_poFb != 0) {
@@ -168,7 +168,7 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int pa_unSi
 		case e_Client:
 		{
 			// Interpret HTTP response and set output status according to success/failure.
-			char output[kAllocSize];
+			char output[cg_unIPLayerRecvBufferSize];
 			bool success = true;
 			if (e_GET == m_eRequestType) {
 				success = mHttpParser.parseGetResponse(output, recvData);

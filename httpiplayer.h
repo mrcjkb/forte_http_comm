@@ -75,14 +75,14 @@ namespace forte {
 		static void closeSocket(CIPComSocketHandler::TSocketDescriptor *pa_nSocketID);
 
 		/** Connection time out in s */
-		const double kTimeOutS = 20;
+		const double kTimeOutS;
 
 		EComResponse openConnection(char *pa_acLayerParameter);
 		EComResponse openConnection();
 		void handledConnectedDataRecv();
 
 		CIPComSocketHandler::TSocketDescriptor m_nSocketID;
-		CIPComSocketHandler::TSocketDescriptor m_nListeningID; //!> to be used by server type connections. there the m_nSocketID will be used for the accepted connection.
+		// CIPComSocketHandler::TSocketDescriptor m_nListeningID; //!> to be used by server type connections. there the m_nSocketID will be used for the accepted connection.
 		CIPComSocketHandler::TUDPDestAddr m_tDestAddr;
 		EComResponse m_eInterruptResp;
 		char m_acRecvBuffer[cg_unIPLayerRecvBufferSize];
@@ -95,4 +95,4 @@ namespace forte {
 
 }
 
-#endif /* _HTTPIPCOMLAYER_H_ */
+#endif /*_HTTPIPCOMLAYER_H_*/
