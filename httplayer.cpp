@@ -103,7 +103,8 @@ EComResponse forte::com_infra::CHttpComLayer::openConnection(char *pa_acLayerPar
 		}
 		char ipParams[kAllocSize]; // address + port for CIPComLayer
 		// Copy params for later use by HTTP parser ()
-		memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
+		mParams[0] = 0;
+		strncpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 		sscanf(pa_acLayerParameter, "%99[^/]", ipParams); // Extract address & port for IP com layer
 		m_poBottomLayer->openConnection(ipParams, "/0");
 		m_eConnectionState = e_Disconnected;
@@ -256,6 +257,6 @@ bool CHttpComLayer::serializeData(const CIEC_ANY& pa_roCIECData) {
 		return false;
 	}
 	const char* data = string.getValue();
-	memcpy(mReqData, data, strlen(data) + 1);
+	strncpy(mReqData, data, strlen(data) + 1);
 	return true;
 }

@@ -53,6 +53,7 @@
 
 #include "ipcomlayer.h"
 #include "httplayer.h"
+#include <time.h>
 
 namespace forte {
 
@@ -75,7 +76,7 @@ namespace forte {
 		static void closeSocket(CIPComSocketHandler::TSocketDescriptor *pa_nSocketID);
 
 		/** Connection time out in s */
-		const double kTimeOutS;
+		const time_t kTimeOutS;
 
 		EComResponse openConnection(char *pa_acLayerParameter);
 		EComResponse openConnection();

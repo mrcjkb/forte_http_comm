@@ -54,7 +54,6 @@
 #include "../../core/datatypes/forte_dint.h"
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 using namespace forte::com_infra;
 
@@ -71,7 +70,6 @@ CHttpIPComLayer::~CHttpIPComLayer() {
 }
 
 void CHttpIPComLayer::closeConnection() {
-	DEVLOG_DEBUG("CSocketBaseLayer::closeConnection() \n");
 	closeSocket(&m_nSocketID);
 	// closeSocket(&m_nListeningID);
 	m_eConnectionState = e_Disconnected;
@@ -93,14 +91,12 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 		{
 			m_unBufFillSize = 0;
 			m_acRecvBuffer[0] = 0;
-			bool withinTimeoutPeriod = true;
 			closeConnection(); // In case it is currently open
 			const char* requestCache = static_cast<char*>(pa_pvData);
-			time_t start; // for timeout
-			time_t timer;
-			time(&start);
+			time_t start = time(0); // for timeout
+			time_t endWait = start + kTimeOutS;
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
-			while (withinTimeoutPeriod && (m_unBufFillSize == 0 || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+			while (start < endWait && (0 == m_unBufFillSize || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
 #ifdef WIN32
 					Sleep(0);
 #else
@@ -110,17 +106,17 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 					m_unBufFillSize = 0;
 					m_acRecvBuffer[0] = 0;
 					char request[CHttpComLayer::kAllocSize];
-					memcpy(request, requestCache, strlen(requestCache) + 1);
+					strncpy(request, requestCache, strlen(requestCache) + 1);
 					openConnection();
 					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
 						m_eInterruptResp = e_ProcessDataSendFailed;
 					}
 				}
 				handledConnectedDataRecv();
-				if (e_ProcessDataOk != m_eInterruptResp && difftime(time(&timer), start) > kTimeOutS) { // Timeout?
-					m_eInterruptResp = e_ProcessDataSendFailed;
-					withinTimeoutPeriod = false;
-				}
+				start = time(0);
+			}
+			if (e_ProcessDataOk != m_eInterruptResp || start >= endWait) { // Timeout?
+				m_eInterruptResp = e_ProcessDataSendFailed;
 			}
 			EComResponse eBackup = m_eInterruptResp;
 			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
@@ -155,14 +151,15 @@ EComResponse CHttpIPComLayer::recvData(const void*, unsigned int) {
 
 EComResponse CHttpIPComLayer::openConnection(char *pa_acLayerParameter) {
 	// For HTTP client: cache parameters and return INIT+ event
-	memcpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
+	mParams[0] = 0;
+	strncpy(mParams, pa_acLayerParameter, strlen(pa_acLayerParameter) + 1);
 	return e_InitOk;
 }
 
 EComResponse CHttpIPComLayer::openConnection() {
 	// Copy params to new char* and perform the same actions as in CIPComLayer
 	char pa_acLayerParameter[CHttpComLayer::kAllocSize];
-	memcpy(pa_acLayerParameter, mParams, strlen(mParams) + 1);
+	strncpy(pa_acLayerParameter, mParams, strlen(mParams) + 1);
 	EComResponse eRetVal = e_InitInvalidId;
 	char *acPort = strchr(pa_acLayerParameter, ':');
 	if (0 != acPort) {
@@ -238,7 +235,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		case 0:
 			DEVLOG_INFO("Connection closed by peer\n");
 			m_eInterruptResp = e_InitTerminated;
-			closeSocket(&m_nSocketID);
+			closeConnection();
 			if (e_Server == m_poFb->getComServiceType()) {
 				//Move server into listening mode again
 				m_eConnectionState = e_Listening;
