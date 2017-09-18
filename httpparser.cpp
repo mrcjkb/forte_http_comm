@@ -46,6 +46,7 @@
 #include "httpparser.h"
 #include <stdio.h>
 #include <string.h>
+#include "devlog.h"
 
 using namespace forte::com_infra;
 
@@ -94,16 +95,20 @@ bool CHttpParser::parseGetResponse(char* dest, char* src) {
 	if (CHttpParser::isOKresponse(src)) {
 		// Extract data from HTTP GET respnse char
 		char* data = strstr(src, "\r\n\r\n");
-		if (0 != data) {
-			data += 4;
-			sscanf(data, "%99s[^/n])", dest);
-			return true;
+		if (strlen(data) > 6) { // \r\n\r\n + body + \r\n
+			if (0 != data) {
+				data += 4;
+				sscanf(data, "%99s[^/n])", dest);
+				return true;
+			}
 		}
+		DEVLOG_INFO("Empty HTTP response received\n");
 		// Empty response received?
-		memcpy(dest, "0\0", 2);
+		strncpy(dest, "0", 2);
 		return false;
 	}
 	// Bad response received?
+	DEVLOG_INFO("Unexpected HTTP GET response code\n");
 	CHttpParser::getHttpResponseCode(dest, src);
 	return false;
 }
@@ -113,6 +118,7 @@ bool CHttpParser::parsePutResponse(char* dest, char* src) {
 		strcpy(dest, mExpectedRspCode);
 		return true;
 	}
+	DEVLOG_INFO("Unexpected HTTP PUT response code\n");
 	CHttpParser::getHttpResponseCode(dest, src);
 	return false;
 }
@@ -123,7 +129,8 @@ void CHttpParser::getHttpResponseCode(char* dest, char* src) {
 		memcpy(dest, tmp, strlen(tmp) + 1);
 	}
 	else {
-		memcpy(dest, "Invalid response\0", 17);
+		DEVLOG_INFO("Invalid HTTP response\n");
+		strncpy(dest, "Invalid response", 17);
 	}
 }
 

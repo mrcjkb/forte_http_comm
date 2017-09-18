@@ -89,34 +89,47 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			break;
 		case e_Client:
 		{
-			m_unBufFillSize = 0;
-			m_acRecvBuffer[0] = 0;
-			closeConnection(); // In case it is currently open
 			const char* requestCache = static_cast<char*>(pa_pvData);
 			time_t start = time(0); // for timeout
 			time_t endWait = start + kTimeOutS;
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
-			while (start < endWait && (0 == m_unBufFillSize || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+			bool activeAttempt = true;
+			while (start < endWait && activeAttempt) {
 #ifdef WIN32
-					Sleep(0);
+				Sleep(0);
 #else
-					sleep(0);
+				sleep(0);
 #endif
-				if (e_Connected != m_eConnectionState) {
-					m_unBufFillSize = 0;
-					m_acRecvBuffer[0] = 0;
-					char request[CHttpComLayer::kAllocSize];
-					strncpy(request, requestCache, strlen(requestCache) + 1);
-					openConnection();
-					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
-						m_eInterruptResp = e_ProcessDataSendFailed;
+				m_unBufFillSize = 0;
+				m_acRecvBuffer[0] = 0;
+				char request[CHttpComLayer::kAllocSize];
+				strncpy(request, requestCache, strlen(requestCache) + 1);
+				openConnection();
+				if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
+					m_eInterruptResp = e_ProcessDataSendFailed;
+					activeAttempt = false;
+					DEVLOG_INFO("Sending HTTP request failed\n");
+				}
+				else {
+					// Wait for peer to close connection because it may not contain Content-length in header
+					// and may not support chunked encoding
+					// TODO: Implement detection of content-length and/or chunk detection to break out of loop early
+					while (e_Connected == m_eConnectionState && start < endWait) {
+						//start < endWait && (0 == strstr(m_acRecvBuffer, "HTTP")
+						//|| 0 == m_unBufFillSize || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
+						handledConnectedDataRecv();
+						start = time(0);
+					}
+					if (0 != strstr(m_acRecvBuffer, "\r\n\r\n")) {
+						// Minimum amoount of data for HTTP response received
+						m_eInterruptResp = e_ProcessDataOk;
+						activeAttempt = false;
 					}
 				}
-				handledConnectedDataRecv();
-				start = time(0);
 			}
-			if (e_ProcessDataOk != m_eInterruptResp || start >= endWait) { // Timeout?
+			if (start >= endWait) { // Timeout?
 				m_eInterruptResp = e_ProcessDataSendFailed;
+				DEVLOG_INFO("HTTP response Timeout exceeded\n");
 			}
 			EComResponse eBackup = m_eInterruptResp;
 			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
