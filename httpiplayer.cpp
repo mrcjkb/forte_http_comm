@@ -95,11 +95,6 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
 			bool activeAttempt = true;
 			while (start < endWait && activeAttempt) {
-#ifdef WIN32
-				Sleep(0);
-#else
-				sleep(0);
-#endif
 				m_unBufFillSize = 0;
 				char request[CHttpComLayer::kAllocSize];
 				strncpy(request, requestCache, strlen(requestCache) + 1);
@@ -108,10 +103,11 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 					m_eInterruptResp = e_ProcessDataSendFailed;
 					DEVLOG_INFO("Opening HTTP connection failed\n");
 				} else {
+					DEVLOG_INFO("Sending request on TCP\n");
 					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
 						m_eInterruptResp = e_ProcessDataSendFailed;
 						activeAttempt = false;
-						DEVLOG_INFO("Sending HTTP request failed\n");
+						DEVLOG_INFO("Sending request on TCP failed\n");
 					}
 					else {
 						// Wait for peer to close connection because it may not contain Content-length in header
@@ -145,9 +141,12 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 		}
 	}
 	// Ensure event output is sent (sendData does not trigger e_ProcessDataOk events for clients/servers/subscribers)
+	DEVLOG_INFO("Interrupting CommFB\n");
 	m_poFb->interruptCommFB(this);
+	DEVLOG_INFO("Forcing CommFB CNF event\n");
 	CEventChainExecutionThread *poEventChainExecutor = m_poFb->getEventChainExecutor();
 	m_poFb->receiveInputEvent(cg_nExternalEventID, *poEventChainExecutor);
+	DEVLOG_INFO("CommFB CNF event executed\n");
 	// Make sure sendData() does not trigger additional INIT- event in case of failure
 	return e_Nothing;
 }
@@ -232,6 +231,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
 		case e_Client:
+			DEVLOG_INFO("Attempting to receive data from TCP\n");
 			nRetVal =
 				CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
 					- m_unBufFillSize);
@@ -245,6 +245,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		case 0:
 			m_eInterruptResp = e_InitTerminated;
 			closeConnection();
+			DEVLOG_INFO("Connection closed by peer\n");
 			if (e_Server == m_poFb->getComServiceType()) {
 				//Move server into listening mode again
 				m_eConnectionState = e_Listening;
@@ -252,14 +253,12 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			break;
 		case -1:
 			m_eInterruptResp = e_ProcessDataRecvFaild;
+			DEVLOG_INFO("Failed to receive data from TCP\n");
 			break;
 		default:
 			//we successfully received data
+			DEVLOG_INFO("Successfully received data from TCP\n");
 			m_unBufFillSize += nRetVal;
-			if (m_unBufFillSize < cg_unIPLayerRecvBufferSize) {
-				// This prevents corrupting the response in case the trailing 0 was not received
-				m_acRecvBuffer[m_unBufFillSize] = 0;
-			}
 			m_eInterruptResp = e_ProcessDataOk;
 			break;
 			}
