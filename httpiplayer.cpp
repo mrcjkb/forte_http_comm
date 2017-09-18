@@ -104,26 +104,29 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				m_acRecvBuffer[0] = 0;
 				char request[CHttpComLayer::kAllocSize];
 				strncpy(request, requestCache, strlen(requestCache) + 1);
-				openConnection();
-				if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
-					m_eInterruptResp = e_ProcessDataSendFailed;
+				if (e_InitOk != openConnection()) {
 					activeAttempt = false;
-					DEVLOG_INFO("Sending HTTP request failed\n");
-				}
-				else {
-					// Wait for peer to close connection because it may not contain Content-length in header
-					// and may not support chunked encoding
-					// TODO: Implement detection of content-length and/or chunk detection to break out of loop early
-					while (e_Connected == m_eConnectionState && start < endWait) {
-						//start < endWait && (0 == strstr(m_acRecvBuffer, "HTTP")
-						//|| 0 == m_unBufFillSize || 0 == strstr(m_acRecvBuffer, "\r\n\r\n"))) {
-						handledConnectedDataRecv();
-						start = time(0);
-					}
-					if (0 != strstr(m_acRecvBuffer, "\r\n\r\n")) {
-						// Minimum amoount of data for HTTP response received
-						m_eInterruptResp = e_ProcessDataOk;
+					m_eInterruptResp = e_ProcessDataSendFailed;
+					DEVLOG_INFO("Opening HTTP connection failed\n");
+				} else {
+					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
+						m_eInterruptResp = e_ProcessDataSendFailed;
 						activeAttempt = false;
+						DEVLOG_INFO("Sending HTTP request failed\n");
+					}
+					else {
+						// Wait for peer to close connection because it may not contain Content-length in header
+						// and may not support chunked encoding
+						// TODO: Implement detection of content-length and/or chunk detection to break out of loop early
+						while (e_Connected == m_eConnectionState && start < endWait) {
+							handledConnectedDataRecv();
+							start = time(0);
+						}
+						if (0 != strstr(m_acRecvBuffer, "\r\n\r\n")) {
+							// Minimum amoount of data for HTTP response received
+							m_eInterruptResp = e_ProcessDataOk;
+							activeAttempt = false;
+						}
 					}
 				}
 			}
@@ -220,14 +223,13 @@ void CHttpIPComLayer::closeSocket(CIPComSocketHandler::TSocketDescriptor *pa_nSo
 }
 
 void CHttpIPComLayer::handledConnectedDataRecv() {
-	// in case of fragmented packets, it can occur that the buffer is full,
-	// to avoid calling receiveDataFromTCP with a buffer size of 0 wait until buffer is larger than 0
-	while ((cg_unIPLayerRecvBufferSize - m_unBufFillSize) <= 0) {
-#ifdef WIN32
-		Sleep(0);
-#else
-		sleep(0);
-#endif
+	if ((cg_unIPLayerRecvBufferSize - m_unBufFillSize) <= 0) {
+		// If buffer is full, clear and return
+		memset(&m_acRecvBuffer[0], 0, sizeof(m_acRecvBuffer));
+		m_unBufFillSize = 0;
+		m_eInterruptResp = e_ProcessDataRecvFaild;
+		DEVLOG_INFO("HTTP recv buffer full\n");
+		return;
 	}
 	if (CIPComSocketHandler::scm_nInvalidSocketDescriptor != m_nSocketID) {
 		// TODO: sync buffer and bufFillSize
@@ -246,7 +248,6 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		}
 		switch (nRetVal) {
 		case 0:
-			DEVLOG_INFO("Connection closed by peer\n");
 			m_eInterruptResp = e_InitTerminated;
 			closeConnection();
 			if (e_Server == m_poFb->getComServiceType()) {
@@ -260,6 +261,10 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		default:
 			//we successfully received data
 			m_unBufFillSize += nRetVal;
+			if (m_unBufFillSize < cg_unIPLayerRecvBufferSize) {
+				// This prevents corrupting the response in case the trailing 0 was not received
+				m_acRecvBuffer[m_unBufFillSize] = 0;
+			}
 			m_eInterruptResp = e_ProcessDataOk;
 			break;
 			}
