@@ -158,41 +158,43 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int){
 }
 
 EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int){
+	EComResponse eRetVal = e_ProcessDataSendFailed;
 	char* recvData = (char*) pa_pvData;
-	EComResponse eRetVal = e_Nothing;
-	if (m_poFb != 0) {
-		CIEC_ANY* apoRDs = m_poFb->getRDs();
-		switch (m_poFb->getComServiceType()) {
-		case e_Server:
-			// TODO: Currently not implemented.
-			break;
-		case e_Client:
-		{
-			// Interpret HTTP response and set output status according to success/failure.
-			char output[cg_unIPLayerRecvBufferSize];
-			bool success = true;
-			if (e_GET == m_eRequestType) {
-				success = mHttpParser.parseGetResponse(output, recvData);
+	if (0 != strstr(recvData, "\r\n\r\n")) { // Verify that at least a body has been received
+		if (m_poFb != 0) {
+			CIEC_ANY* apoRDs = m_poFb->getRDs();
+			switch (m_poFb->getComServiceType()) {
+			case e_Server:
+				// TODO: Currently not implemented.
+				break;
+			case e_Client:
+			{
+				// Interpret HTTP response and set output status according to success/failure.
+				char output[cg_unIPLayerRecvBufferSize];
+				bool success = true;
+				if (e_GET == m_eRequestType) {
+					success = mHttpParser.parseGetResponse(output, recvData);
+				}
+				else if (e_PUT == m_eRequestType) {
+					success = mHttpParser.parsePutResponse(output, recvData);
+				}
+				if (success) {
+					eRetVal = e_ProcessDataOk;
+				}
+				else {
+					eRetVal = e_ProcessDataSendFailed;
+				}
+				// Set data output if possible
+				if (m_poFb->getNumRD() > 0) {
+					apoRDs->fromString(output);
+				}
+				break;
 			}
-			else if (e_PUT == m_eRequestType) {
-				success = mHttpParser.parsePutResponse(output, recvData);
+			case e_Publisher:
+			case e_Subscriber:
+				// HTTP does not use UDP
+				break;
 			}
-			if (success) {
-				eRetVal = e_ProcessDataOk;
-			}
-			else {
-				eRetVal = e_ProcessDataSendFailed;
-			}
-			// Set data output if possible
-			if (m_poFb->getNumRD() > 0) {
-				apoRDs->fromString(output);
-			}
-			break;
-		}
-		case e_Publisher:
-		case e_Subscriber:
-			// HTTP does not use UDP
-			break;
 		}
 	}
 	return eRetVal;

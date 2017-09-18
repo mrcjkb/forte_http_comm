@@ -122,9 +122,8 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 							handledConnectedDataRecv();
 							start = time(0);
 						}
-						if (0 != strstr(m_acRecvBuffer, "\r\n\r\n")) {
-							// Minimum amoount of data for HTTP response received
-							m_eInterruptResp = e_ProcessDataOk;
+						m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
+						if (e_ProcessDataOk == m_eInterruptResp) {
 							activeAttempt = false;
 						}
 					}
@@ -134,12 +133,10 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				m_eInterruptResp = e_ProcessDataSendFailed;
 				DEVLOG_INFO("HTTP response Timeout exceeded\n");
 			}
+			// Close connection to deinitialize socket
 			EComResponse eBackup = m_eInterruptResp;
 			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
 			m_eInterruptResp = eBackup;
-			if (e_ProcessDataOk == m_eInterruptResp) {
-				m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
-			}
 			break;
 		}
 		case e_Publisher:
