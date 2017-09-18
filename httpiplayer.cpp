@@ -101,7 +101,6 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				sleep(0);
 #endif
 				m_unBufFillSize = 0;
-				m_acRecvBuffer[0] = 0;
 				char request[CHttpComLayer::kAllocSize];
 				strncpy(request, requestCache, strlen(requestCache) + 1);
 				if (e_InitOk != openConnection()) {
@@ -222,7 +221,6 @@ void CHttpIPComLayer::closeSocket(CIPComSocketHandler::TSocketDescriptor *pa_nSo
 void CHttpIPComLayer::handledConnectedDataRecv() {
 	if ((cg_unIPLayerRecvBufferSize - m_unBufFillSize) <= 0) {
 		// If buffer is full, clear and return
-		memset(&m_acRecvBuffer[0], 0, sizeof(m_acRecvBuffer));
 		m_unBufFillSize = 0;
 		m_eInterruptResp = e_ProcessDataRecvFaild;
 		DEVLOG_INFO("HTTP recv buffer full\n");
