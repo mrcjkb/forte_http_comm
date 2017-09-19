@@ -232,7 +232,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			fd_set fdset;
 			FD_ZERO(&fdset);
 			FD_SET(m_nSocketID, &fdset);
-			if (select(m_nSocketID, &fdset, NULL, NULL, &tv) > 0) {
+			if (select(m_nSocketID + 1, &fdset, NULL, NULL, &tv) > 0) {
 				DEVLOG_DEBUG("Attempting to receive data from TCP\n");
 				nRetVal =
 					CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
