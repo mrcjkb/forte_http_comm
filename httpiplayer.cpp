@@ -222,6 +222,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 	if (CIPComSocketHandler::scm_nInvalidSocketDescriptor != m_nSocketID) {
 		// TODO: sync buffer and bufFillSize
 		int nRetVal = 0;
+		int sRetVal = 0;
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
 		case e_Client:
@@ -232,7 +233,8 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			fd_set fdset;
 			FD_ZERO(&fdset);
 			FD_SET(m_nSocketID, &fdset);
-			if (select(m_nSocketID + 1, &fdset, NULL, NULL, &tv) > 0) {
+			sRetVal = select(m_nSocketID + 1, &fdset, NULL, NULL, &tv);
+			if (sRetVal > 0) {
 				DEVLOG_DEBUG("Attempting to receive data from TCP\n");
 				nRetVal =
 					CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
@@ -240,7 +242,16 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			}
 			else {
 				nRetVal = -1;
-				DEVLOG_INFO("No data received from TCP\n");
+				if (sRetVal == 0) {
+					DEVLOG_INFO("No data received from TCP due to timeout\n");
+				}
+				else {
+#ifdef WIN32
+					DEVLOG_INFO("Select failed on HttpIpComLayer: %d", WSAGetLastError());
+#else
+					DEVLOG_INFO("Select failed: on HttpIpComLayer %s", strerror(errno));
+#endif
+				}
 			}
 			break;
 		case e_Publisher:
