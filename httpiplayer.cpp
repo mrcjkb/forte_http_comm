@@ -101,7 +101,7 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 				DEVLOG_INFO("Opening HTTP connection failed\n");
 			}
 			else {
-				DEVLOG_INFO("Sending request on TCP\n");
+				DEVLOG_DEBUG("Sending request on TCP\n");
 				if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
 					m_eInterruptResp = e_ProcessDataSendFailed;
 					DEVLOG_INFO("Sending request on TCP failed\n");
@@ -134,12 +134,12 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 		}
 	}
 	// Ensure event output is sent (sendData does not trigger e_ProcessDataOk events for clients/servers/subscribers)
-	DEVLOG_INFO("Interrupting CommFB\n");
+	DEVLOG_DEBUG("Interrupting CommFB\n");
 	m_poFb->interruptCommFB(this);
-	DEVLOG_INFO("Forcing CommFB CNF event\n");
+	DEVLOG_DEBUG("Forcing CommFB CNF event\n");
 	CEventChainExecutionThread *poEventChainExecutor = m_poFb->getEventChainExecutor();
 	m_poFb->receiveInputEvent(cg_nExternalEventID, *poEventChainExecutor);
-	DEVLOG_INFO("CommFB CNF event executed\n");
+	DEVLOG_DEBUG("CommFB CNF event executed\n");
 	// Make sure sendData() does not trigger additional INIT- event in case of failure
 	return e_Nothing;
 }
@@ -232,14 +232,14 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			FD_ZERO(&fdset);
 			FD_SET(m_nSocketID, &fdset);
 			if (select(1, &fdset, NULL, NULL, &tv) > 0) {
-				DEVLOG_INFO("Attempting to receive data from TCP\n");
+				DEVLOG_DEBUG("Attempting to receive data from TCP\n");
 				nRetVal =
 					CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
 						- m_unBufFillSize);
 			}
 			else {
 				nRetVal = -1;
-				DEVLOG_INFO("No data received\n");
+				DEVLOG_INFO("No data received from TCP\n");
 			}
 			break;
 		case e_Publisher:
@@ -250,7 +250,7 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		switch (nRetVal) {
 		case 0:
 			m_eInterruptResp = e_InitTerminated;
-			DEVLOG_INFO("Connection closed by peer\n");
+			DEVLOG_DEBUG("Connection closed by peer\n");
 			closeConnection();
 			if (e_Server == m_poFb->getComServiceType()) {
 				//Move server into listening mode again
@@ -259,11 +259,11 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 			break;
 		case -1:
 			m_eInterruptResp = e_ProcessDataRecvFaild;
-			DEVLOG_INFO("Failed to receive data from TCP\n");
+			DEVLOG_DEBUG("Failed to receive data from TCP\n");
 			break;
 		default:
 			//we successfully received data
-			DEVLOG_INFO("Successfully received data from TCP\n");
+			DEVLOG_DEBUG("Successfully received data from TCP\n");
 			m_unBufFillSize += nRetVal;
 			m_eInterruptResp = e_ProcessDataOk;
 			break;

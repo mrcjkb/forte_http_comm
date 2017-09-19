@@ -159,7 +159,7 @@ EComResponse CHttpComLayer::sendData(void *pa_pvData, unsigned int){
 }
 
 EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int){
-	DEVLOG_INFO("Handling received HTTP response\n");
+	DEVLOG_DEBUG("Handling received HTTP response\n");
 	EComResponse eRetVal = e_ProcessDataSendFailed;
 	char* recvData = (char*) pa_pvData;
 	if (0 != strstr(recvData, "\r\n\r\n")) { // Verify that at least a body has been received
