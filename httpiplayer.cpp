@@ -97,7 +97,7 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			while (start < endWait && activeAttempt) {
 				m_unBufFillSize = 0;
 				char request[CHttpComLayer::kAllocSize];
-				strncpy(request, requestCache, strlen(requestCache) + 1);
+				memcpy(request, requestCache, CHttpComLayer::kAllocSize);
 				if (e_InitOk != openConnection()) {
 					activeAttempt = false;
 					m_eInterruptResp = e_ProcessDataSendFailed;
