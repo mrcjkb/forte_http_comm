@@ -118,7 +118,8 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 							start = time(0);
 						}
 						m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
-						if (e_ProcessDataOk == m_eInterruptResp) {
+						if (e_ProcessDataRecvFaild != m_eInterruptResp) {
+							DEVLOG_INFO("HTTP parsed successfully\n");
 							activeAttempt = false;
 						}
 					}
@@ -244,8 +245,8 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		switch (nRetVal) {
 		case 0:
 			m_eInterruptResp = e_InitTerminated;
-			closeConnection();
 			DEVLOG_INFO("Connection closed by peer\n");
+			closeConnection();
 			if (e_Server == m_poFb->getComServiceType()) {
 				//Move server into listening mode again
 				m_eConnectionState = e_Listening;

@@ -201,6 +201,8 @@ EComResponse CHttpComLayer::recvData(const void *pa_pvData, unsigned int){
 	}
 	else {
 		DEVLOG_INFO("Invalid or incomplete HTTP response\n");
+		// This indicates to the layer below to keep on attempting to receive data
+		eRetVal = e_ProcessDataRecvFaild;
 	}
 	return eRetVal;
 }
