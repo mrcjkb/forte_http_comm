@@ -93,36 +93,28 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 			time_t start = time(0); // for timeout
 			time_t endWait = start + kTimeOutS;
 			// Loop runs until the end of the time out period or until the HTTP response has been received completely
-			bool activeAttempt = true;
-			while (start < endWait && activeAttempt) {
-				m_unBufFillSize = 0;
-				char request[CHttpComLayer::kAllocSize];
-				memcpy(request, requestCache, CHttpComLayer::kAllocSize);
-				if (e_InitOk != openConnection()) {
-					activeAttempt = false;
+			m_unBufFillSize = 0;
+			char request[CHttpComLayer::kAllocSize];
+			memcpy(request, requestCache, CHttpComLayer::kAllocSize);
+			if (e_InitOk != openConnection()) {
+				m_eInterruptResp = e_ProcessDataSendFailed;
+				DEVLOG_INFO("Opening HTTP connection failed\n");
+			}
+			else {
+				DEVLOG_INFO("Sending request on TCP\n");
+				if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
 					m_eInterruptResp = e_ProcessDataSendFailed;
-					DEVLOG_INFO("Opening HTTP connection failed\n");
-				} else {
-					DEVLOG_INFO("Sending request on TCP\n");
-					if (0 >= CIPComSocketHandler::sendDataOnTCP(m_nSocketID, request, pa_unSize)) {
-						m_eInterruptResp = e_ProcessDataSendFailed;
-						activeAttempt = false;
-						DEVLOG_INFO("Sending request on TCP failed\n");
+					DEVLOG_INFO("Sending request on TCP failed\n");
+				}
+				else {
+					// Wait for peer to close connection because it may not contain Content-length in header
+					// and may not support chunked encoding
+					// TODO: Implement detection of content-length and/or chunk detection in httplayer to break out of loop early
+					while (e_Connected == m_eConnectionState && start < endWait) {
+						handledConnectedDataRecv();
+						start = time(0);
 					}
-					else {
-						// Wait for peer to close connection because it may not contain Content-length in header
-						// and may not support chunked encoding
-						// TODO: Implement detection of content-length and/or chunk detection to break out of loop early
-						while (e_Connected == m_eConnectionState && start < endWait) {
-							handledConnectedDataRecv();
-							start = time(0);
-						}
-						m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
-						if (e_ProcessDataRecvFaild != m_eInterruptResp) {
-							DEVLOG_INFO("HTTP parsed successfully\n");
-							activeAttempt = false;
-						}
-					}
+					m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
 				}
 			}
 			if (start >= endWait) { // Timeout?
