@@ -110,21 +110,22 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 					// Wait for peer to close connection because it may not contain Content-length in header
 					// and may not support chunked encoding
 					// TODO: Implement detection of content-length and/or chunk detection in httplayer to break out of loop early
-					while (e_Connected == m_eConnectionState && start < endWait) {
+					while (e_InitTerminated != m_eInterruptResp && start < endWait) {
 						handledConnectedDataRecv();
 						start = time(0);
 					}
-					m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
 				}
 			}
-			if (start >= endWait) { // Timeout?
-				m_eInterruptResp = e_ProcessDataSendFailed;
-				DEVLOG_INFO("HTTP response Timeout exceeded\n");
+			// Call recvData only if timeout has not been exceeded before successfully receiving data
+			if (start < endWait && e_InitTerminated == m_eInterruptResp) { 
+				m_eInterruptResp = m_poTopLayer->recvData(m_acRecvBuffer, m_unBufFillSize);
 			}
-			// Close connection to deinitialize socket
-			EComResponse eBackup = m_eInterruptResp;
-			closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
-			m_eInterruptResp = eBackup;
+			else {
+				DEVLOG_INFO("HTTP response Timeout exceeded\n");
+				m_eInterruptResp = e_ProcessDataSendFailed;
+				// Close connection to deinitialize socket
+				closeConnection(); // This sets m_eInterruptedResp to e_InitTerminated
+			}
 			break;
 		}
 		case e_Publisher:
@@ -249,9 +250,9 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		}
 		switch (nRetVal) {
 		case 0:
-			m_eInterruptResp = e_InitTerminated;
 			DEVLOG_DEBUG("Connection closed by peer\n");
 			closeConnection();
+			m_eInterruptResp = e_InitTerminated;
 			if (e_Server == m_poFb->getComServiceType()) {
 				//Move server into listening mode again
 				m_eConnectionState = e_Listening;
