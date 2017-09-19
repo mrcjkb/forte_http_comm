@@ -224,10 +224,23 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
 		case e_Client:
-			DEVLOG_INFO("Attempting to receive data from TCP\n");
-			nRetVal =
-				CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
-					- m_unBufFillSize);
+			// Call select() on socket to ensure data is available to be read
+			struct timeval tv; // Timeout
+			tv.tv_sec = 10; 
+			tv.tv_usec = 10000;
+			fd_set fdset;
+			FD_ZERO(&fdset);
+			FD_SET(m_nSocketID, &fdset);
+			if (select(1, &fdset, NULL, NULL, &tv) > 0) {
+				DEVLOG_INFO("Attempting to receive data from TCP\n");
+				nRetVal =
+					CIPComSocketHandler::receiveDataFromTCP(m_nSocketID, &m_acRecvBuffer[m_unBufFillSize], cg_unIPLayerRecvBufferSize
+						- m_unBufFillSize);
+			}
+			else {
+				nRetVal = -1;
+				DEVLOG_INFO("No data received\n");
+			}
 			break;
 		case e_Publisher:
 		case e_Subscriber:
