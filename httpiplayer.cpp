@@ -111,7 +111,11 @@ EComResponse CHttpIPComLayer::sendData(void *pa_pvData, unsigned int pa_unSize) 
 					// and may not support chunked encoding
 					// TODO: Implement detection of content-length and/or chunk detection in httplayer to break out of loop early
 					while (e_InitTerminated != m_eInterruptResp && start < endWait) {
-						handledConnectedDataRecv();
+#ifdef WIN32
+						Sleep(0);
+#else
+						sleep(0);
+#endif
 						start = time(0);
 					}
 				}
@@ -149,8 +153,23 @@ EComResponse CHttpIPComLayer::processInterrupt() {
 	return m_eInterruptResp;
 }
 
-EComResponse CHttpIPComLayer::recvData(const void*, unsigned int) {
-	// Data is received in the sendData method.
+EComResponse CHttpIPComLayer::recvData(const void *pa_pvData, unsigned int) {
+	m_eInterruptResp = e_Nothing;
+	switch (m_eConnectionState) {
+	case e_Listening:
+		//TODO Server not yet implemented
+		break;
+	case e_Connected:
+		if (m_nSocketID == *(static_cast<const CIPComSocketHandler::TSocketDescriptor *>(pa_pvData))) {
+			handledConnectedDataRecv();
+		}
+		break;
+	case e_ConnectedAndListening:
+	case e_Disconnected:
+	default:
+		break;
+	}
+	return m_eInterruptResp;
 	return e_Nothing;
 }
 
@@ -194,6 +213,10 @@ EComResponse CHttpIPComLayer::openConnection() {
 		}
 
 		if (CIPComSocketHandler::scm_nInvalidSocketDescriptor != nSockDes) {
+			if (e_Publisher != m_poFb->getComServiceType()) {
+				//Publishers should not be registered for receiving data
+				CIPComSocketHandler::getInstance().addComCallback(nSockDes, this);
+			}
 			eRetVal = e_InitOk;
 		}
 		else {
@@ -222,18 +245,11 @@ void CHttpIPComLayer::handledConnectedDataRecv() {
 	if (CIPComSocketHandler::scm_nInvalidSocketDescriptor != m_nSocketID) {
 		// TODO: sync buffer and bufFillSize
 		int nRetVal = 0;
-		int sRetVal = 0;
+		int sRetVal = 1;
 		switch (m_poFb->getComServiceType()) {
 		case e_Server:
 		case e_Client:
 			// Call select() on socket to ensure data is available to be read
-			struct timeval tv; // Timeout
-			tv.tv_sec = 10; 
-			tv.tv_usec = 10000;
-			fd_set fdset;
-			FD_ZERO(&fdset);
-			FD_SET(m_nSocketID, &fdset);
-			sRetVal = select(m_nSocketID + 1, &fdset, NULL, NULL, &tv);
 			if (sRetVal > 0) {
 				DEVLOG_DEBUG("Attempting to receive data from TCP\n");
 				nRetVal =
