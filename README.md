@@ -1,5 +1,8 @@
 # FORTE HTTP Com Layer
-Simple HTTP Com Layer for 4diac-RTE (FORTE)
+Simple HTTP Com Layer for 4diac-RTE (FORTE).
+
+# This repository is no longer maintained!
+It has been migrated to the official FORTE project. There will be no further development on this repository. As long as it has not yet been published to the stable version of FORTE, you can still use this repository or download/pull the develop branch of FORTE for the latest version of this module.
 ​
 # Requires
 * 4diac-RTE (https://www.eclipse.org/4diac/)
